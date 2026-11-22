@@ -3,21 +3,19 @@
 Unofficial Windows fan project: one continuous Fallout journey from the
 **Capital Wasteland** to the **Mojave** and back (plane west, boat east).
 
-**Phase 3 (current):** expanded Capital exterior coverage, hot-wasteland
-streaming policy, Mojave exterior `cow` hints, and `CrossroadsSpine.esp`
-quest stubs — on top of the Phase 2 travel loop.
+**Current build (v0.4):** Phase 0–4 complete — boot gate, Capital pack, travel
+loop, coverage/spine stubs, crash guard + doctor checklist.
 
 ## Bring your own games
 
-You must own legal PC copies of:
+See [`docs/ownership.md`](docs/ownership.md). You must own:
 
 | Game | Expected build |
 |---|---|
-| Fallout 3 | **1.7.0.3-class** (GOG 1.7.0.3, or Steam downgraded to 1.7.0.3) |
+| Fallout 3 | **1.7.0.3-class** |
 | Fallout: New Vegas | Steam **1.4.0.525** |
 
-The launcher only stores paths under `%AppData%\FalloutCrossroads\`. It
-**never** copies Bethesda game assets into git.
+No Bethesda assets in git. Mod policy: [`docs/mod-policy.md`](docs/mod-policy.md).
 
 ## Build (Windows 10/11 + MSVC)
 
@@ -32,18 +30,26 @@ Outputs: `FalloutCrossroads.exe` and `CrossroadsPlugin.dll` (Win32).
 
 1. Set both install paths → **Launch** (deploys Foothold + Transit + Spine ESPs).
 2. **Advance** through Capital → Plane → Mojave → Boat → Capital.
-3. Use Capital / Mojave `coc`/`cow` hints from the dialog and log.
+3. Check `%AppData%\FalloutCrossroads\` for `journey.json`, `doctor.txt`, logs.
 
-Details: [`docs/phase-3-coverage.md`](docs/phase-3-coverage.md).
+## Docs
 
-## Roadmap
-
-| Phase | Goal |
+| Doc | Topic |
 |---|---|
-| 0–1 | Boot + Capital foothold |
-| 2 | Travel loop |
-| 3 (now) | Coverage + spine stubs |
-| 4 | Polish, crash hygiene, ownership docs |
+| [phase-2-travel.md](docs/phase-2-travel.md) | Travel loop |
+| [phase-3-coverage.md](docs/phase-3-coverage.md) | Coverage + spine |
+| [phase-4-polish.md](docs/phase-4-polish.md) | Crash/doctor |
+| [performance.md](docs/performance.md) | Perf notes |
+
+## Roadmap status
+
+| Phase | Status |
+|---|---|
+| 0 Boot + BYO gate | done |
+| 1 Capital foothold | done |
+| 2 Travel loop | done |
+| 3 Coverage + spine | done |
+| 4 Polish / hygiene | done |
 
 ## License
 

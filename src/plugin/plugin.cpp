@@ -1,6 +1,7 @@
 #include "plugin.hpp"
 
 #include "coverage_policy.hpp"
+#include "crash_guard.hpp"
 #include "log.hpp"
 #include "settings.hpp"
 #include "transit_journey.hpp"
@@ -11,7 +12,9 @@ namespace crossroads::plugin {
 
 void on_attach() {
   log::init(log_path());
+  install_crash_guard();
   log::info("CrossroadsPlugin attached inside FalloutNV.exe host");
+  log::info(std::string("Crossroads ") + CROSSROADS_VERSION);
   const JourneyState journey = load_journey();
   const LegPlaybook book = playbook_for(journey);
   log::info(std::string("Transit leg: ") + transit_leg_name(journey.leg) + " — " + book.title);
