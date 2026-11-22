@@ -1,3 +1,5 @@
+#include <windows.h>
+#include <winres.h>
 #include "resource.h"
 
 #ifndef IDC_STATIC
