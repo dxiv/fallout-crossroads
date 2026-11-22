@@ -7,7 +7,7 @@ if(NOT WIN32)
 endif()
 
 project(fallout-crossroads
-  VERSION 0.1.0
+  VERSION 0.4.0
   DESCRIPTION "Fallout: Crossroads"
   LANGUAGES CXX)
 
@@ -46,6 +46,8 @@ add_library(crossroads_core STATIC
   src/mojave_foothold.cpp
   src/coverage_policy.cpp
   src/spine_esp.cpp
+  src/crash_guard.cpp
+  src/doctor.cpp
   src/bridge_foothold.cpp
 )
 target_include_directories(crossroads_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")

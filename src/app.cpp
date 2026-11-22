@@ -1,6 +1,7 @@
 #include "app.hpp"
 
 #include "bridge_foothold.hpp"
+#include "doctor.hpp"
 #include "esm_probe.hpp"
 #include "host_launch.hpp"
 #include "install_detect.hpp"
@@ -186,6 +187,11 @@ void sync_journey_from_bridge(const FootholdBridgeResult& foothold) {
 void launch_phase2_host(HWND owner) {
   save_settings(g_settings);
 
+  const DoctorReport doctor = run_doctor(g_settings.fallout3_install, g_settings.fallout_nv_install);
+  if (!doctor.ok) {
+    log::warn(doctor.summary);
+  }
+
   const EsmProbeResult probe = probe_fallout3_worldspaces(g_settings.fallout3_install);
   if (probe.ok) {
     log::info(probe.summary);
@@ -203,7 +209,10 @@ void launch_phase2_host(HWND owner) {
   JourneyState journey = load_journey();
   const LegPlaybook book = playbook_for(journey);
 
-  std::wstring msg = L"Phase 3 coverage + travel loop + host\r\n\r\n";
+  std::wstring msg = L"Fallout: Crossroads v";
+  msg += utf8_to_wide(CROSSROADS_VERSION);
+  msg += L"\r\n\r\n";
+  msg += utf8_to_wide(doctor.summary) + L"\r\n\r\n";
   msg += utf8_to_wide(probe.summary) + L"\r\n";
   if (!probe.detail.empty()) {
     msg += utf8_to_wide(probe.detail) + L"\r\n\r\n";
@@ -250,7 +259,8 @@ INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
       g_log_box = GetDlgItem(dlg, IDC_LOG);
       log::set_sink(ui_log_sink);
       InitCommonControls();
-      set_window_text(dlg, IDC_TITLE, L"Fallout: Crossroads  —  Phase 3 coverage");
+      set_window_text(dlg, IDC_TITLE,
+                      L"Fallout: Crossroads  —  v" + utf8_to_wide(CROSSROADS_VERSION));
       g_settings = load_settings();
       load_paths_into_ui(dlg);
       log::info("Boot UI ready.");
@@ -334,6 +344,7 @@ int run_app(HINSTANCE instance, int /*show_command*/) {
     return 1;
   }
 
+  // log::init may already have run from wWinMain (crash guard); safe to re-init.
   log::init(log_path());
   log::info("Fallout: Crossroads boot " CROSSROADS_VERSION);
 
