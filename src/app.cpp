@@ -145,6 +145,12 @@ void refresh_status(HWND dlg) {
 
   set_window_text(dlg, IDC_F3_STATUS, utf8_to_wide(g_f3.summary));
   set_window_text(dlg, IDC_FNV_STATUS, utf8_to_wide(g_fnv.summary));
+  if (!g_f3.ok && !g_f3.detail.empty()) {
+    log::warn(g_f3.detail);
+  }
+  if (!g_fnv.ok && !g_fnv.detail.empty()) {
+    log::warn(g_fnv.detail);
+  }
 
   const bool ready = both_installs_ready(g_f3, g_fnv);
   EnableWindow(GetDlgItem(dlg, IDC_CONTINUE), ready ? TRUE : FALSE);
