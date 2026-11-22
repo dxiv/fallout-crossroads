@@ -5,6 +5,7 @@
 #include "esp_writer.hpp"
 #include "log.hpp"
 #include "settings.hpp"
+#include "world_import.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -108,20 +109,41 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
   FootholdBridgeResult result;
   const auto staged = foothold_staging_dir() / L"CrossroadsFoothold.esp";
 
-  // Phase 1c: prefer a real imported F3 interior.
-  const CellImportResult imported = import_capital_foothold_cell(f3_install, staged);
-  if (imported.ok) {
-    result.cell_editor_id = imported.cell_editor_id;
-    result.f3_worldspace_hint = imported.cell_editor_id;
+  // Phase 1d: Capital pack (interior + WRLD exterior slice).
+  const Phase1ImportResult pack = import_phase1_capital_pack(f3_install, staged);
+  bool wrote_esp = pack.ok;
+  if (pack.ok) {
+    result.cell_editor_id = pack.interior_edid.empty() ? "CrossroadsFoothold" : pack.interior_edid;
+    result.world_editor_id = pack.world_edid;
+    result.f3_worldspace_hint = pack.world_edid.empty() ? pack.interior_edid : pack.world_edid;
+    result.coc_hint = pack.coc_hint;
+    result.cow_hint = pack.cow_hint;
+    result.exterior_cells = pack.exterior_cells;
   } else {
-    log::warn("F3 cell import failed (" + imported.summary + "); falling back to empty foothold CELL");
-    result.cell_editor_id = "CrossroadsFoothold";
-    const auto written = write_foothold_esp(staged, result.cell_editor_id);
-    if (!written.ok) {
-      result.summary = written.summary;
-      result.detail = written.detail + " | import: " + imported.summary;
-      return result;
+    log::warn("Phase 1 Capital pack failed (" + pack.summary + "); trying interior-only import");
+    const CellImportResult imported = import_capital_foothold_cell(f3_install, staged);
+    if (imported.ok) {
+      wrote_esp = true;
+      result.cell_editor_id = imported.cell_editor_id;
+      result.f3_worldspace_hint = imported.cell_editor_id;
+      result.coc_hint = "coc " + imported.cell_editor_id;
+    } else {
+      log::warn("F3 cell import failed (" + imported.summary + "); falling back to empty foothold CELL");
+      result.cell_editor_id = "CrossroadsFoothold";
+      result.coc_hint = "coc CrossroadsFoothold";
+      const auto written = write_foothold_esp(staged, result.cell_editor_id);
+      if (!written.ok) {
+        result.summary = written.summary;
+        result.detail = written.detail + " | pack: " + pack.summary + " | interior: " + imported.summary;
+        return result;
+      }
+      wrote_esp = true;
     }
+  }
+
+  if (!wrote_esp) {
+    result.summary = "No foothold ESP produced";
+    return result;
   }
 
   const BsaWireResult bsa = wire_fallout3_bsas_into_fnv(f3_install, fnv_install);
@@ -134,18 +156,29 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
   }
 
   std::ostringstream detail;
-  if (imported.ok) {
-    detail << "imported CELL " << imported.cell_editor_id << " (" << imported.detail << ")";
-  } else {
-    detail << "empty foothold CELL (import failed: " << imported.summary << ")";
+  if (pack.ok) {
+    detail << pack.detail;
+  } else if (!result.coc_hint.empty()) {
+    detail << "fallback import path";
   }
   detail << " | " << bsa.summary << " — " << bsa.detail;
   detail << " | deployed " << wide_to_utf8(result.esp_in_data.wstring());
   detail << " | " << plugins_note;
-  detail << " | console: coc " << result.cell_editor_id;
+  if (!result.coc_hint.empty()) {
+    detail << " | console: " << result.coc_hint;
+  }
+  if (!result.cow_hint.empty()) {
+    detail << " | " << result.cow_hint;
+  }
 
   result.ok = true;
-  result.summary = imported.ok ? "Capital foothold cell imported" : "Foothold ESP deployed (fallback)";
+  if (pack.ok) {
+    result.summary = "Phase 1 Capital pack deployed";
+  } else if (result.cell_editor_id == "CrossroadsFoothold") {
+    result.summary = "Foothold ESP deployed (fallback)";
+  } else {
+    result.summary = "Capital interior deployed (pack fallback)";
+  }
   result.detail = detail.str();
   log::info(result.summary + " — " + result.detail);
   return result;

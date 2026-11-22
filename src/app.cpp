@@ -133,8 +133,8 @@ void refresh_status(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_CONTINUE), ready ? TRUE : FALSE);
   if (ready) {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Both installs validated. Launch imports an F3 interior into CrossroadsFoothold.esp, "
-                    L"wires BYO BSAs, then starts FalloutNV.exe with CrossroadsPlugin.dll.");
+                    L"Both installs validated. Launch imports a Capital pack (interior + exterior slice) "
+                    L"into CrossroadsFoothold.esp, wires BYO BSAs, then starts FalloutNV.exe with the plugin.");
   } else {
     set_window_text(dlg, IDC_GATE_NOTE,
                     L"Crossroads refuses to launch until BOTH legal installs validate. "
@@ -164,7 +164,7 @@ void launch_phase1_host(HWND owner) {
   const auto plugin = default_plugin_path_next_to_exe();
   const LaunchResult launched = launch_fnv_with_plugin(g_settings.fallout_nv_install, plugin);
 
-  std::wstring msg = L"Phase 1c Capital cell import + host\r\n\r\n";
+  std::wstring msg = L"Phase 1 Capital pack (interior + exterior) + host\r\n\r\n";
   msg += utf8_to_wide(probe.summary) + L"\r\n";
   if (!probe.detail.empty()) {
     msg += utf8_to_wide(probe.detail) + L"\r\n\r\n";
@@ -173,8 +173,15 @@ void launch_phase1_host(HWND owner) {
   msg += utf8_to_wide(foothold.detail) + L"\r\n\r\n";
   msg += utf8_to_wide(launched.summary) + L"\r\n";
   msg += utf8_to_wide(launched.detail) + L"\r\n\r\n";
-  msg += L"In the console (~): coc ";
-  msg += utf8_to_wide(foothold.cell_editor_id);
+  msg += L"Console (~):\r\n";
+  if (!foothold.coc_hint.empty()) {
+    msg += utf8_to_wide(foothold.coc_hint) + L"\r\n";
+  } else {
+    msg += L"coc " + utf8_to_wide(foothold.cell_editor_id) + L"\r\n";
+  }
+  if (!foothold.cow_hint.empty()) {
+    msg += utf8_to_wide(foothold.cow_hint) + L"\r\n";
+  }
   msg += L"\r\nLog: %AppData%\\FalloutCrossroads\\crossroads.log";
 
   const bool ok = foothold.ok && launched.ok;
