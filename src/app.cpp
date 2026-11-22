@@ -1,5 +1,6 @@
 #include "app.hpp"
 
+#include "bridge_foothold.hpp"
 #include "esm_probe.hpp"
 #include "host_launch.hpp"
 #include "install_detect.hpp"
@@ -132,8 +133,8 @@ void refresh_status(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_CONTINUE), ready ? TRUE : FALSE);
   if (ready) {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Both installs validated. Launch starts FalloutNV.exe and injects CrossroadsPlugin.dll "
-                    L"(Phase 1 host spike).");
+                    L"Both installs validated. Launch builds the foothold ESP, deploys it into FNV Data, "
+                    L"then starts FalloutNV.exe with CrossroadsPlugin.dll.");
   } else {
     set_window_text(dlg, IDC_GATE_NOTE,
                     L"Crossroads refuses to launch until BOTH legal installs validate. "
@@ -157,22 +158,27 @@ void launch_phase1_host(HWND owner) {
     log::warn(probe.summary + " — " + probe.detail);
   }
 
+  const FootholdBridgeResult foothold =
+      build_and_deploy_foothold(g_settings.fallout3_install, g_settings.fallout_nv_install);
+
   const auto plugin = default_plugin_path_next_to_exe();
   const LaunchResult launched = launch_fnv_with_plugin(g_settings.fallout_nv_install, plugin);
 
-  std::wstring msg = L"Phase 1 host launch\r\n\r\n";
+  std::wstring msg = L"Phase 1b foothold + host\r\n\r\n";
   msg += utf8_to_wide(probe.summary) + L"\r\n";
   if (!probe.detail.empty()) {
     msg += utf8_to_wide(probe.detail) + L"\r\n\r\n";
   }
+  msg += utf8_to_wide(foothold.summary) + L"\r\n";
+  msg += utf8_to_wide(foothold.detail) + L"\r\n\r\n";
   msg += utf8_to_wide(launched.summary) + L"\r\n";
   msg += utf8_to_wide(launched.detail) + L"\r\n\r\n";
-  msg +=
-      L"Capital foothold content bridging is still a stub. "
-      L"If the plugin attached, check %AppData%\\FalloutCrossroads\\crossroads.log.";
+  msg += L"In the console (~): coc CrossroadsFoothold\r\n";
+  msg += L"Log: %AppData%\\FalloutCrossroads\\crossroads.log";
 
+  const bool ok = foothold.ok && launched.ok;
   MessageBoxW(owner, msg.c_str(), L"Fallout: Crossroads",
-              launched.ok ? MB_OK | MB_ICONINFORMATION : MB_OK | MB_ICONWARNING);
+              ok ? MB_OK | MB_ICONINFORMATION : MB_OK | MB_ICONWARNING);
 }
 
 INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
