@@ -1,0 +1,36 @@
+#include "resource.h"
+
+#ifndef IDC_STATIC
+#define IDC_STATIC -1
+#endif
+
+IDD_MAIN DIALOGEX 0, 0, 420, 310
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Fallout: Crossroads"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Fallout: Crossroads",IDC_TITLE,12,10,396,12
+    LTEXT           "Unofficial fan project. BYO legal Fallout 3 + New Vegas installs only.",IDC_STATIC,12,24,396,10
+
+    GROUPBOX        "Fallout 3 (1.7.0.3-class)",IDC_STATIC,12,40,396,48
+    EDITTEXT        IDC_F3_PATH,20,54,310,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse…",IDC_F3_BROWSE,336,52,64,16
+    LTEXT           "",IDC_F3_STATUS,20,72,380,10
+
+    GROUPBOX        "Fallout: New Vegas (1.4.0.525)",IDC_STATIC,12,94,396,48
+    EDITTEXT        IDC_FNV_PATH,20,108,310,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse…",IDC_FNV_BROWSE,336,106,64,16
+    LTEXT           "",IDC_FNV_STATUS,20,126,380,10
+
+    LTEXT           "",IDC_GATE_NOTE,12,150,396,20
+
+    LTEXT           "Log",IDC_STATIC,12,174,40,10
+    LISTBOX         IDC_LOG,12,186,396,80,LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+
+    PUSHBUTTON      "Save settings",IDC_SAVE,12,274,70,18
+    PUSHBUTTON      "Re-check",IDC_RECHECK,86,274,60,18
+    PUSHBUTTON      "Legal",IDC_LEGAL,150,274,50,18
+    PUSHBUTTON      "Credits",IDC_CREDITS,204,274,50,18
+    DEFPUSHBUTTON   "Continue",IDC_CONTINUE,286,274,60,18
+    PUSHBUTTON      "Quit",IDC_QUIT,350,274,50,18
+END
