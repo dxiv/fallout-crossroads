@@ -8,12 +8,10 @@ namespace crossroads::plugin {
 void on_attach() {
   log::init(log_path());
   log::info("CrossroadsPlugin attached inside FalloutNV.exe host");
-  log::info("Phase 1b: look for CrossroadsFoothold.esp in Data\\");
-  log::info("Console: coc CrossroadsFoothold");
+  log::info("Phase 1c: CrossroadsFoothold.esp should be an imported F3 interior (or empty fallback)");
+  log::info("Console: coc <cell EDID> — see launcher dialog / crossroads.log for the EDID used");
   const Settings s = load_settings();
-  if (!s.fallout3_install.empty()) {
-    log::info("F3 install path is configured (BYO). Full Capital cell import is a later step.");
-  } else {
+  if (s.fallout3_install.empty()) {
     log::warn("No Fallout 3 path in settings; run FalloutCrossroads.exe first.");
   }
 }
