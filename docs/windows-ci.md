@@ -10,4 +10,4 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A Win32
 cmake --build build --config Release
 ```
 
-Output: `build\Release\FalloutCrossroads.exe`
+Outputs: `FalloutCrossroads.exe` and `CrossroadsPlugin.dll`.

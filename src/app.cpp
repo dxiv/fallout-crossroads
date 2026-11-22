@@ -1,5 +1,7 @@
 #include "app.hpp"
 
+#include "esm_probe.hpp"
+#include "host_launch.hpp"
 #include "install_detect.hpp"
 #include "legal.hpp"
 #include "log.hpp"
@@ -130,10 +132,11 @@ void refresh_status(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_CONTINUE), ready ? TRUE : FALSE);
   if (ready) {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Both installs validated. Continue unlocks the Phase 0 menu shell (no game world yet).");
+                    L"Both installs validated. Launch starts FalloutNV.exe and injects CrossroadsPlugin.dll "
+                    L"(Phase 1 host spike).");
   } else {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Crossroads refuses to continue until BOTH legal installs validate. "
+                    L"Crossroads refuses to launch until BOTH legal installs validate. "
                     L"No Bethesda files are copied into this project.");
   }
 }
@@ -144,14 +147,32 @@ void load_paths_into_ui(HWND dlg) {
   refresh_status(dlg);
 }
 
-void show_menu_shell(HWND owner) {
-  MessageBoxW(owner,
-              L"Phase 0 menu shell\r\n"
-              L"\r\n"
-              L"Install gate passed. There is no playable world yet.\r\n"
-              L"Next milestone: FNV-hosted bridge and a Capital Wasteland "
-              L"foothold. See README.md for the roadmap.",
-              L"Fallout: Crossroads", MB_OK | MB_ICONINFORMATION);
+void launch_phase1_host(HWND owner) {
+  save_settings(g_settings);
+
+  const EsmProbeResult probe = probe_fallout3_worldspaces(g_settings.fallout3_install);
+  if (probe.ok) {
+    log::info(probe.summary);
+  } else {
+    log::warn(probe.summary + " — " + probe.detail);
+  }
+
+  const auto plugin = default_plugin_path_next_to_exe();
+  const LaunchResult launched = launch_fnv_with_plugin(g_settings.fallout_nv_install, plugin);
+
+  std::wstring msg = L"Phase 1 host launch\r\n\r\n";
+  msg += utf8_to_wide(probe.summary) + L"\r\n";
+  if (!probe.detail.empty()) {
+    msg += utf8_to_wide(probe.detail) + L"\r\n\r\n";
+  }
+  msg += utf8_to_wide(launched.summary) + L"\r\n";
+  msg += utf8_to_wide(launched.detail) + L"\r\n\r\n";
+  msg +=
+      L"Capital foothold content bridging is still a stub. "
+      L"If the plugin attached, check %AppData%\\FalloutCrossroads\\crossroads.log.";
+
+  MessageBoxW(owner, msg.c_str(), L"Fallout: Crossroads",
+              launched.ok ? MB_OK | MB_ICONINFORMATION : MB_OK | MB_ICONWARNING);
 }
 
 INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -213,8 +234,7 @@ INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
                         L"Install gate", MB_OK | MB_ICONWARNING);
             return TRUE;
           }
-          save_settings(g_settings);
-          show_menu_shell(dlg);
+          launch_phase1_host(dlg);
           return TRUE;
         case IDC_QUIT:
         case IDCANCEL:
