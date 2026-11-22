@@ -35,8 +35,11 @@ add_library(crossroads_core STATIC
   src/settings.cpp
   src/install_detect.cpp
   src/esm_probe.cpp
+  src/esm_index.cpp
   src/host_launch.cpp
   src/esp_writer.cpp
+  src/cell_import.cpp
+  src/bsa_wire.cpp
   src/bridge_foothold.cpp
 )
 target_include_directories(crossroads_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")

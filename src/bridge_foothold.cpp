@@ -1,6 +1,7 @@
 #include "bridge_foothold.hpp"
 
-#include "esm_probe.hpp"
+#include "bsa_wire.hpp"
+#include "cell_import.hpp"
 #include "esp_writer.hpp"
 #include "log.hpp"
 #include "settings.hpp"
@@ -14,16 +15,6 @@
 
 namespace crossroads {
 namespace {
-
-std::wstring utf8_to_wide(const std::string& s) {
-  if (s.empty()) {
-    return {};
-  }
-  const int n = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
-  std::wstring out(n, L'\0');
-  MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), out.data(), n);
-  return out;
-}
 
 std::string wide_to_utf8(const std::wstring& s) {
   if (s.empty()) {
@@ -74,7 +65,6 @@ bool ensure_plugin_enabled(const std::filesystem::path& plugins_txt, const std::
     return false;
   }
   if (!exists) {
-    // Minimal vanilla-style list so we do not enable only our ESP in an empty file.
     out << "FalloutNV.esm\n";
   } else {
     out << "\n";
@@ -83,20 +73,30 @@ bool ensure_plugin_enabled(const std::filesystem::path& plugins_txt, const std::
   return static_cast<bool>(out);
 }
 
-std::string pick_worldspace_hint(const std::filesystem::path& f3_install) {
-  const auto probe = probe_fallout3_worldspaces(f3_install, 64);
-  if (!probe.ok || probe.worldspaces.empty()) {
-    return {};
+bool deploy_esp(const std::filesystem::path& staged,
+                const std::filesystem::path& fnv_install,
+                std::filesystem::path& out_data_esp,
+                std::string& plugins_note) {
+  const auto data_dir = fnv_install / L"Data";
+  if (!std::filesystem::is_directory(data_dir)) {
+    plugins_note = "FNV Data folder missing";
+    return false;
   }
-  // Prefer Capital Wasteland-style names when present.
-  for (const auto& w : probe.worldspaces) {
-    const auto& id = w.editor_id;
-    if (id.find("Wasteland") != std::string::npos || id.find("Capital") != std::string::npos ||
-        id.find("DCWorld") != std::string::npos || id.find("Megaton") != std::string::npos) {
-      return id;
-    }
+  out_data_esp = data_dir / L"CrossroadsFoothold.esp";
+  std::error_code ec;
+  std::filesystem::copy_file(staged, out_data_esp, std::filesystem::copy_options::overwrite_existing, ec);
+  if (ec) {
+    plugins_note = ec.message();
+    return false;
   }
-  return probe.worldspaces.front().editor_id;
+  bool enabled = false;
+  const auto local = local_appdata() / L"FalloutNV" / L"plugins.txt";
+  if (!local.empty()) {
+    enabled = ensure_plugin_enabled(local, "CrossroadsFoothold.esp") || enabled;
+  }
+  enabled = ensure_plugin_enabled(data_dir / L"plugins.txt", "CrossroadsFoothold.esp") || enabled;
+  plugins_note = enabled ? "plugins.txt updated" : "enable CrossroadsFoothold.esp manually";
+  return true;
 }
 
 }  // namespace
@@ -106,56 +106,48 @@ std::filesystem::path foothold_staging_dir() { return settings_dir() / L"bridge"
 FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_install,
                                                const std::filesystem::path& fnv_install) {
   FootholdBridgeResult result;
-  result.cell_editor_id = "CrossroadsFoothold";
-  result.f3_worldspace_hint = pick_worldspace_hint(f3_install);
-
   const auto staged = foothold_staging_dir() / L"CrossroadsFoothold.esp";
-  const auto written = write_foothold_esp(staged, result.cell_editor_id);
-  if (!written.ok) {
-    result.summary = written.summary;
-    result.detail = written.detail;
-    return result;
+
+  // Phase 1c: prefer a real imported F3 interior.
+  const CellImportResult imported = import_capital_foothold_cell(f3_install, staged);
+  if (imported.ok) {
+    result.cell_editor_id = imported.cell_editor_id;
+    result.f3_worldspace_hint = imported.cell_editor_id;
+  } else {
+    log::warn("F3 cell import failed (" + imported.summary + "); falling back to empty foothold CELL");
+    result.cell_editor_id = "CrossroadsFoothold";
+    const auto written = write_foothold_esp(staged, result.cell_editor_id);
+    if (!written.ok) {
+      result.summary = written.summary;
+      result.detail = written.detail + " | import: " + imported.summary;
+      return result;
+    }
   }
 
-  const auto data_dir = fnv_install / L"Data";
-  if (!std::filesystem::is_directory(data_dir)) {
-    result.summary = "FNV Data folder missing";
-    result.detail = wide_to_utf8(data_dir.wstring());
+  const BsaWireResult bsa = wire_fallout3_bsas_into_fnv(f3_install, fnv_install);
+
+  std::string plugins_note;
+  if (!deploy_esp(staged, fnv_install, result.esp_in_data, plugins_note)) {
+    result.summary = "Failed to deploy foothold ESP into FNV Data";
+    result.detail = plugins_note;
     return result;
   }
-
-  result.esp_in_data = data_dir / L"CrossroadsFoothold.esp";
-  std::error_code ec;
-  std::filesystem::copy_file(staged, result.esp_in_data, std::filesystem::copy_options::overwrite_existing, ec);
-  if (ec) {
-    result.summary = "Failed to copy foothold ESP into FNV Data";
-    result.detail = ec.message();
-    log::error(result.summary + ": " + result.detail);
-    return result;
-  }
-
-  // Prefer the per-user plugins list; also try Data\plugins.txt as a fallback.
-  bool enabled = false;
-  const auto local = local_appdata() / L"FalloutNV" / L"plugins.txt";
-  if (!local.empty()) {
-    enabled = ensure_plugin_enabled(local, "CrossroadsFoothold.esp") || enabled;
-  }
-  enabled = ensure_plugin_enabled(data_dir / L"plugins.txt", "CrossroadsFoothold.esp") || enabled;
 
   std::ostringstream detail;
-  detail << "Deployed " << wide_to_utf8(result.esp_in_data.wstring());
-  detail << " | cell EDID " << result.cell_editor_id;
-  if (!result.f3_worldspace_hint.empty()) {
-    detail << " | F3 worldspace hint (BYO): " << result.f3_worldspace_hint;
+  if (imported.ok) {
+    detail << "imported CELL " << imported.cell_editor_id << " (" << imported.detail << ")";
+  } else {
+    detail << "empty foothold CELL (import failed: " << imported.summary << ")";
   }
-  detail << " | plugins.txt " << (enabled ? "updated" : "update failed — enable CrossroadsFoothold.esp manually");
-  detail << " | in-game: coc " << result.cell_editor_id;
+  detail << " | " << bsa.summary << " — " << bsa.detail;
+  detail << " | deployed " << wide_to_utf8(result.esp_in_data.wstring());
+  detail << " | " << plugins_note;
+  detail << " | console: coc " << result.cell_editor_id;
 
   result.ok = true;
-  result.summary = "Foothold bridge deployed";
+  result.summary = imported.ok ? "Capital foothold cell imported" : "Foothold ESP deployed (fallback)";
   result.detail = detail.str();
   log::info(result.summary + " — " + result.detail);
-  (void)utf8_to_wide;
   return result;
 }
 
