@@ -61,11 +61,9 @@ bool version_matches_prefix(const std::string& found, const std::string& expecte
   if (found.empty()) {
     return false;
   }
-  // Accept exact match or matching major.minor.build when revision differs in weird PE metadata.
   if (found == expected) {
     return true;
   }
-  // Also accept if the first three components match (1.7.0.x / 1.4.0.x).
   auto take3 = [](const std::string& v) {
     int dots = 0;
     size_t i = 0;
@@ -79,8 +77,35 @@ bool version_matches_prefix(const std::string& found, const std::string& expecte
   return take3(found) == take3(expected);
 }
 
+std::filesystem::path find_exe(const std::filesystem::path& root,
+                               const std::vector<const wchar_t*>& names) {
+  for (const wchar_t* name : names) {
+    const auto candidate = root / name;
+    if (file_exists(candidate)) {
+      return candidate;
+    }
+  }
+  // Steam sometimes nests under a single child folder.
+  std::error_code ec;
+  if (!dir_exists(root)) {
+    return {};
+  }
+  for (const auto& entry : std::filesystem::directory_iterator(root, ec)) {
+    if (ec || !entry.is_directory()) {
+      continue;
+    }
+    for (const wchar_t* name : names) {
+      const auto candidate = entry.path() / name;
+      if (file_exists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return {};
+}
+
 InstallCheck validate_common(const std::filesystem::path& root,
-                             const wchar_t* exe_name,
+                             const std::vector<const wchar_t*>& exe_names,
                              const wchar_t* esm_rel,
                              const char* expected_version,
                              const char* product_label) {
@@ -96,21 +121,28 @@ InstallCheck validate_common(const std::filesystem::path& root,
     return result;
   }
 
-  const auto exe = root / exe_name;
-  if (!file_exists(exe)) {
+  const auto exe = find_exe(root, exe_names);
+  if (exe.empty()) {
     result.summary = std::string(product_label) + ": executable not found";
-    result.detail = "Expected " + wide_to_utf8(exe.wstring());
+    std::ostringstream detail;
+    detail << "Looked under " << wide_to_utf8(root.wstring()) << " for";
+    for (const wchar_t* name : exe_names) {
+      detail << " " << wide_to_utf8(name);
+    }
+    detail << ". Pick the folder that contains that .exe (Steam: steamapps\\common\\...).";
+    result.detail = detail.str();
+    log::warn(result.summary + " — " + result.detail);
     return result;
   }
 
-  const auto data = root / L"Data";
+  const auto data = exe.parent_path() / L"Data";
   if (!dir_exists(data)) {
     result.summary = std::string(product_label) + ": Data folder missing";
-    result.detail = "Expected a Data directory next to the executable (BYO install).";
+    result.detail = "Expected a Data directory next to " + wide_to_utf8(exe.filename().wstring());
     return result;
   }
 
-  const auto esm = root / esm_rel;
+  const auto esm = exe.parent_path() / esm_rel;
   if (!file_exists(esm)) {
     result.summary = std::string(product_label) + ": master plugin missing";
     result.detail = "Expected " + wide_to_utf8(esm.wstring()) + " from your legal install.";
@@ -123,7 +155,7 @@ InstallCheck validate_common(const std::filesystem::path& root,
     result.detail =
         "Executable and Data look present, but the PE version resource could not be read. "
         "Crossroads expects " +
-        std::string(expected_version) + "-class builds. Continuing is blocked until version is confirmed.";
+        std::string(expected_version) + "-class builds.";
     log::warn(result.detail);
     return result;
   }
@@ -131,7 +163,7 @@ InstallCheck validate_common(const std::filesystem::path& root,
   if (!version_matches_prefix(result.version_found, expected_version)) {
     result.summary = std::string(product_label) + ": unsupported version " + result.version_found;
     result.detail = "Found " + result.version_found + "; expected " + std::string(expected_version) +
-                    "-class. For Fallout 3, use GOG 1.7.0.3 or a Steam install downgraded to 1.7.0.3. "
+                    "-class. For Fallout 3, use GOG 1.7.0.3 or Steam downgraded to 1.7.0.3. "
                     "For New Vegas, use Steam 1.4.0.525.";
     log::warn(result.detail);
     return result;
@@ -147,11 +179,13 @@ InstallCheck validate_common(const std::filesystem::path& root,
 }  // namespace
 
 InstallCheck validate_fallout3(const std::filesystem::path& install_root) {
-  return validate_common(install_root, L"Fallout3.exe", L"Data\\Fallout3.esm", "1.7.0.3", "Fallout 3");
+  return validate_common(install_root, {L"Fallout3.exe", L"Fallout3ng.exe"}, L"Data\\Fallout3.esm",
+                         "1.7.0.3", "Fallout 3");
 }
 
 InstallCheck validate_fallout_nv(const std::filesystem::path& install_root) {
-  return validate_common(install_root, L"FalloutNV.exe", L"Data\\FalloutNV.esm", "1.4.0.525", "Fallout: New Vegas");
+  return validate_common(install_root, {L"FalloutNV.exe"}, L"Data\\FalloutNV.esm", "1.4.0.525",
+                         "Fallout: New Vegas");
 }
 
 bool both_installs_ready(const InstallCheck& f3, const InstallCheck& fnv) { return f3.ok && fnv.ok; }
