@@ -2,14 +2,24 @@
 
 #include "log.hpp"
 #include "settings.hpp"
+#include "transit_journey.hpp"
+
+#include <string>
 
 namespace crossroads::plugin {
 
 void on_attach() {
   log::init(log_path());
   log::info("CrossroadsPlugin attached inside FalloutNV.exe host");
-  log::info("Phase 1c: CrossroadsFoothold.esp should be an imported F3 interior (or empty fallback)");
-  log::info("Console: coc <cell EDID> — see launcher dialog / crossroads.log for the EDID used");
+  const JourneyState journey = load_journey();
+  const LegPlaybook book = playbook_for(journey);
+  log::info(std::string("Transit leg: ") + transit_leg_name(journey.leg) + " — " + book.title);
+  log::info(book.summary);
+  if (!book.console_hint.empty()) {
+    log::info(std::string("Console:\n") + book.console_hint);
+  }
+  log::info(book.next_action);
+  log::info("Plugins expected: CrossroadsFoothold.esp + CrossroadsTransit.esp");
   const Settings s = load_settings();
   if (s.fallout3_install.empty()) {
     log::warn("No Fallout 3 path in settings; run FalloutCrossroads.exe first.");

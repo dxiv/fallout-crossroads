@@ -3,10 +3,9 @@
 Unofficial Windows fan project: one continuous Fallout journey from the
 **Capital Wasteland** to the **Mojave** and back (plane west, boat east).
 
-**Phase 1 (complete):** imports a Capital pack from your BYO `Fallout3.esm` —
-preferred interior CELL plus a small **exterior WRLD slice** (cells / LAND /
-refs) — into `CrossroadsFoothold.esp`, remaps form IDs, wires F3 BSAs into the
-FNV `Data\` folder, then launches `FalloutNV.exe` with `CrossroadsPlugin.dll`.
+**Phase 2 (current):** Capital pack + **Crossroads Transit** (plane/boat cabins)
++ Mojave foothold resolve + `journey.json` travel loop. Launch deploys plugins;
+**Advance** steps Capital → Plane → Mojave → Boat → Capital return.
 
 ## Bring your own games
 
@@ -34,23 +33,20 @@ Outputs (same folder): `FalloutCrossroads.exe` and `CrossroadsPlugin.dll` (Win32
 
 1. Start Steam if needed for New Vegas.
 2. Run `FalloutCrossroads.exe`, set both install paths, **Save settings**.
-3. **Launch** — indexes F3, builds the Capital pack ESP, deploys BSA links,
-   starts the host with the plugin.
-4. Console: `coc <EDID>` and/or `cow <WRLD> <x> <y>` from the dialog/log.
+3. **Launch** — deploys `CrossroadsFoothold.esp` + `CrossroadsTransit.esp`, wires BSAs, starts host.
+4. Follow console hints; use **Advance** to step the travel loop.
 
-Details: [`docs/phase-1d-exterior.md`](docs/phase-1d-exterior.md).
+Details: [`docs/phase-2-travel.md`](docs/phase-2-travel.md).
 
 ## Roadmap
 
 | Phase | Goal |
 |---|---|
 | 0 | Boot UI + BYO install gate |
-| 1 | FNV host + plugin + F3 ESM probe |
-| 1b | Empty foothold ESP deploy |
-| 1c | Import real F3 interior + BSA wiring |
-| 1d (done) | Exterior Capital worldspace / land slice — **Phase 1 complete** |
-| 2 | Plane/boat travel loop Capital ↔ Mojave |
-| 3+ | Expand toward full both-maps play |
+| 1 | Capital foothold (interior + exterior slice) |
+| 2 (now) | Plane/boat travel loop Capital ↔ Mojave |
+| 3 | Expand both-maps coverage + spine stubs |
+| 4 | Polish, crash hygiene, ownership docs |
 
 ## License
 

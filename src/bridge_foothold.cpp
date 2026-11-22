@@ -4,7 +4,9 @@
 #include "cell_import.hpp"
 #include "esp_writer.hpp"
 #include "log.hpp"
+#include "mojave_foothold.hpp"
 #include "settings.hpp"
+#include "transit_esp.hpp"
 #include "world_import.hpp"
 
 #include <fstream>
@@ -74,29 +76,31 @@ bool ensure_plugin_enabled(const std::filesystem::path& plugins_txt, const std::
   return static_cast<bool>(out);
 }
 
-bool deploy_esp(const std::filesystem::path& staged,
-                const std::filesystem::path& fnv_install,
-                std::filesystem::path& out_data_esp,
-                std::string& plugins_note) {
+bool deploy_named_esp(const std::filesystem::path& staged,
+                      const std::filesystem::path& fnv_install,
+                      const std::wstring& esp_name,
+                      std::filesystem::path& out_data_esp,
+                      std::string& plugins_note) {
   const auto data_dir = fnv_install / L"Data";
   if (!std::filesystem::is_directory(data_dir)) {
     plugins_note = "FNV Data folder missing";
     return false;
   }
-  out_data_esp = data_dir / L"CrossroadsFoothold.esp";
+  out_data_esp = data_dir / esp_name;
   std::error_code ec;
   std::filesystem::copy_file(staged, out_data_esp, std::filesystem::copy_options::overwrite_existing, ec);
   if (ec) {
     plugins_note = ec.message();
     return false;
   }
+  const std::string name_utf8 = wide_to_utf8(esp_name);
   bool enabled = false;
   const auto local = local_appdata() / L"FalloutNV" / L"plugins.txt";
   if (!local.empty()) {
-    enabled = ensure_plugin_enabled(local, "CrossroadsFoothold.esp") || enabled;
+    enabled = ensure_plugin_enabled(local, name_utf8) || enabled;
   }
-  enabled = ensure_plugin_enabled(data_dir / L"plugins.txt", "CrossroadsFoothold.esp") || enabled;
-  plugins_note = enabled ? "plugins.txt updated" : "enable CrossroadsFoothold.esp manually";
+  enabled = ensure_plugin_enabled(data_dir / L"plugins.txt", name_utf8) || enabled;
+  plugins_note = enabled ? (name_utf8 + " enabled") : ("enable " + name_utf8 + " manually");
   return true;
 }
 
@@ -108,8 +112,8 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
                                                const std::filesystem::path& fnv_install) {
   FootholdBridgeResult result;
   const auto staged = foothold_staging_dir() / L"CrossroadsFoothold.esp";
+  const auto transit_staged = foothold_staging_dir() / L"CrossroadsTransit.esp";
 
-  // Phase 1d: Capital pack (interior + WRLD exterior slice).
   const Phase1ImportResult pack = import_phase1_capital_pack(f3_install, staged);
   bool wrote_esp = pack.ok;
   if (pack.ok) {
@@ -146,39 +150,60 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
     return result;
   }
 
+  const TransitEspResult transit = write_transit_esp(transit_staged);
+  if (!transit.ok) {
+    result.summary = transit.summary;
+    result.detail = transit.detail;
+    return result;
+  }
+  result.plane_cell = transit.plane_cell;
+  result.boat_cell = transit.boat_cell;
+
+  const MojaveFootholdResult mojave = resolve_mojave_foothold(fnv_install);
+  if (mojave.ok) {
+    result.mojave_cell_edid = mojave.cell_editor_id;
+    result.mojave_world_edid = mojave.world_editor_id;
+  }
+
   const BsaWireResult bsa = wire_fallout3_bsas_into_fnv(f3_install, fnv_install);
 
   std::string plugins_note;
-  if (!deploy_esp(staged, fnv_install, result.esp_in_data, plugins_note)) {
+  if (!deploy_named_esp(staged, fnv_install, L"CrossroadsFoothold.esp", result.esp_in_data, plugins_note)) {
     result.summary = "Failed to deploy foothold ESP into FNV Data";
     result.detail = plugins_note;
+    return result;
+  }
+  std::string transit_note;
+  if (!deploy_named_esp(transit_staged, fnv_install, L"CrossroadsTransit.esp", result.transit_esp_in_data,
+                        transit_note)) {
+    result.summary = "Failed to deploy CrossroadsTransit.esp";
+    result.detail = transit_note;
     return result;
   }
 
   std::ostringstream detail;
   if (pack.ok) {
     detail << pack.detail;
-  } else if (!result.coc_hint.empty()) {
-    detail << "fallback import path";
+  } else {
+    detail << "fallback capital path";
   }
+  detail << " | transit: " << transit.detail;
+  detail << " | mojave: " << (mojave.ok ? mojave.detail : mojave.summary);
   detail << " | " << bsa.summary << " — " << bsa.detail;
-  detail << " | deployed " << wide_to_utf8(result.esp_in_data.wstring());
-  detail << " | " << plugins_note;
+  detail << " | " << plugins_note << " | " << transit_note;
   if (!result.coc_hint.empty()) {
-    detail << " | console: " << result.coc_hint;
+    detail << " | " << result.coc_hint;
   }
   if (!result.cow_hint.empty()) {
     detail << " | " << result.cow_hint;
   }
+  detail << " | coc " << result.plane_cell << " | coc " << result.boat_cell;
+  if (!result.mojave_cell_edid.empty()) {
+    detail << " | coc " << result.mojave_cell_edid;
+  }
 
   result.ok = true;
-  if (pack.ok) {
-    result.summary = "Phase 1 Capital pack deployed";
-  } else if (result.cell_editor_id == "CrossroadsFoothold") {
-    result.summary = "Foothold ESP deployed (fallback)";
-  } else {
-    result.summary = "Capital interior deployed (pack fallback)";
-  }
+  result.summary = "Phase 2 Capital + Transit + Mojave foothold deployed";
   result.detail = detail.str();
   log::info(result.summary + " — " + result.detail);
   return result;

@@ -8,6 +8,7 @@
 #include "log.hpp"
 #include "resource.h"
 #include "settings.hpp"
+#include "transit_journey.hpp"
 
 #include <commctrl.h>
 #include <shobjidl.h>
@@ -119,6 +120,21 @@ std::wstring get_window_text(HWND dlg, int id) {
   return text;
 }
 
+void refresh_journey_ui(HWND dlg) {
+  const JourneyState j = load_journey();
+  const LegPlaybook book = playbook_for(j);
+  std::wstring line = L"Journey: ";
+  line += utf8_to_wide(transit_leg_name(j.leg));
+  line += L" — ";
+  line += utf8_to_wide(book.title);
+  if (j.loop_count > 0) {
+    line += L" (loops ";
+    line += std::to_wstring(j.loop_count);
+    line += L")";
+  }
+  set_window_text(dlg, IDC_JOURNEY_STATUS, line);
+}
+
 void refresh_status(HWND dlg) {
   g_settings.fallout3_install = get_window_text(dlg, IDC_F3_PATH);
   g_settings.fallout_nv_install = get_window_text(dlg, IDC_FNV_PATH);
@@ -131,15 +147,17 @@ void refresh_status(HWND dlg) {
 
   const bool ready = both_installs_ready(g_f3, g_fnv);
   EnableWindow(GetDlgItem(dlg, IDC_CONTINUE), ready ? TRUE : FALSE);
+  EnableWindow(GetDlgItem(dlg, IDC_ADVANCE), ready ? TRUE : FALSE);
   if (ready) {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Both installs validated. Launch imports a Capital pack (interior + exterior slice) "
-                    L"into CrossroadsFoothold.esp, wires BYO BSAs, then starts FalloutNV.exe with the plugin.");
+                    L"Launch deploys Capital pack + Transit ESP + Mojave foothold hints, then starts the host. "
+                    L"Use Advance to step Capital → Plane → Mojave → Boat → Capital.");
   } else {
     set_window_text(dlg, IDC_GATE_NOTE,
                     L"Crossroads refuses to launch until BOTH legal installs validate. "
                     L"No Bethesda files are copied into this project.");
   }
+  refresh_journey_ui(dlg);
 }
 
 void load_paths_into_ui(HWND dlg) {
@@ -148,7 +166,24 @@ void load_paths_into_ui(HWND dlg) {
   refresh_status(dlg);
 }
 
-void launch_phase1_host(HWND owner) {
+void sync_journey_from_bridge(const FootholdBridgeResult& foothold) {
+  JourneyState j = load_journey();
+  if (!foothold.cell_editor_id.empty()) {
+    j.capital_cell_edid = foothold.cell_editor_id;
+  }
+  if (!foothold.cow_hint.empty()) {
+    j.capital_cow_hint = foothold.cow_hint;
+  }
+  if (!foothold.mojave_cell_edid.empty()) {
+    j.mojave_cell_edid = foothold.mojave_cell_edid;
+  }
+  if (!foothold.mojave_world_edid.empty()) {
+    j.mojave_world_edid = foothold.mojave_world_edid;
+  }
+  save_journey(j);
+}
+
+void launch_phase2_host(HWND owner) {
   save_settings(g_settings);
 
   const EsmProbeResult probe = probe_fallout3_worldspaces(g_settings.fallout3_install);
@@ -160,11 +195,15 @@ void launch_phase1_host(HWND owner) {
 
   const FootholdBridgeResult foothold =
       build_and_deploy_foothold(g_settings.fallout3_install, g_settings.fallout_nv_install);
+  sync_journey_from_bridge(foothold);
 
   const auto plugin = default_plugin_path_next_to_exe();
   const LaunchResult launched = launch_fnv_with_plugin(g_settings.fallout_nv_install, plugin);
 
-  std::wstring msg = L"Phase 1 Capital pack (interior + exterior) + host\r\n\r\n";
+  JourneyState journey = load_journey();
+  const LegPlaybook book = playbook_for(journey);
+
+  std::wstring msg = L"Phase 2 travel loop + host\r\n\r\n";
   msg += utf8_to_wide(probe.summary) + L"\r\n";
   if (!probe.detail.empty()) {
     msg += utf8_to_wide(probe.detail) + L"\r\n\r\n";
@@ -173,20 +212,36 @@ void launch_phase1_host(HWND owner) {
   msg += utf8_to_wide(foothold.detail) + L"\r\n\r\n";
   msg += utf8_to_wide(launched.summary) + L"\r\n";
   msg += utf8_to_wide(launched.detail) + L"\r\n\r\n";
+  msg += utf8_to_wide(book.title) + L"\r\n";
+  msg += utf8_to_wide(book.summary) + L"\r\n";
   msg += L"Console (~):\r\n";
-  if (!foothold.coc_hint.empty()) {
-    msg += utf8_to_wide(foothold.coc_hint) + L"\r\n";
-  } else {
-    msg += L"coc " + utf8_to_wide(foothold.cell_editor_id) + L"\r\n";
-  }
-  if (!foothold.cow_hint.empty()) {
-    msg += utf8_to_wide(foothold.cow_hint) + L"\r\n";
-  }
-  msg += L"\r\nLog: %AppData%\\FalloutCrossroads\\crossroads.log";
+  msg += utf8_to_wide(book.console_hint);
+  msg += L"\r\n\r\n";
+  msg += utf8_to_wide(book.next_action);
+  msg += L"\r\n\r\nLog: %AppData%\\FalloutCrossroads\\crossroads.log";
 
   const bool ok = foothold.ok && launched.ok;
   MessageBoxW(owner, msg.c_str(), L"Fallout: Crossroads",
               ok ? MB_OK | MB_ICONINFORMATION : MB_OK | MB_ICONWARNING);
+  refresh_journey_ui(owner);
+}
+
+void on_advance_journey(HWND owner) {
+  JourneyState j = load_journey();
+  j = advance_journey(j);
+  const LegPlaybook book = playbook_for(j);
+  std::wstring msg = utf8_to_wide(book.title) + L"\r\n\r\n";
+  msg += utf8_to_wide(book.summary) + L"\r\n\r\n";
+  msg += L"Console:\r\n";
+  msg += utf8_to_wide(book.console_hint);
+  msg += L"\r\n\r\n";
+  msg += utf8_to_wide(book.next_action);
+  msg += L"\r\n\r\nSession: level ";
+  msg += std::to_wstring(j.level);
+  msg += L", caps ";
+  msg += std::to_wstring(j.caps);
+  MessageBoxW(owner, msg.c_str(), L"Journey advanced", MB_OK | MB_ICONINFORMATION);
+  refresh_journey_ui(owner);
 }
 
 INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -195,7 +250,7 @@ INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
       g_log_box = GetDlgItem(dlg, IDC_LOG);
       log::set_sink(ui_log_sink);
       InitCommonControls();
-      set_window_text(dlg, IDC_TITLE, L"Fallout: Crossroads  —  Phase 0 boot");
+      set_window_text(dlg, IDC_TITLE, L"Fallout: Crossroads  —  Phase 2 travel");
       g_settings = load_settings();
       load_paths_into_ui(dlg);
       log::info("Boot UI ready.");
@@ -239,6 +294,9 @@ INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
         case IDC_CREDITS:
           MessageBoxW(dlg, credits_text(), L"Credits — Fallout: Crossroads", MB_OK | MB_ICONINFORMATION);
           return TRUE;
+        case IDC_ADVANCE:
+          on_advance_journey(dlg);
+          return TRUE;
         case IDC_CONTINUE:
           refresh_status(dlg);
           if (!both_installs_ready(g_f3, g_fnv)) {
@@ -248,7 +306,7 @@ INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
                         L"Install gate", MB_OK | MB_ICONWARNING);
             return TRUE;
           }
-          launch_phase1_host(dlg);
+          launch_phase2_host(dlg);
           return TRUE;
         case IDC_QUIT:
         case IDCANCEL:
