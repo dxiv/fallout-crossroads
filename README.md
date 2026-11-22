@@ -3,9 +3,10 @@
 Unofficial Windows fan project: one continuous Fallout journey from the
 **Capital Wasteland** to the **Mojave** and back (plane west, boat east).
 
-**Phase 1 (current):** boot launcher + `CrossroadsPlugin.dll` injected into a
-BYO `FalloutNV.exe` host, plus a Fallout 3 ESM worldspace probe. There is not
-yet a playable Capital cell.
+**Phase 1b (current):** launches the FNV host with `CrossroadsPlugin.dll`, probes
+BYO Fallout 3 worldspaces, and deploys a Crossroads-authored foothold interior
+(`CrossroadsFoothold.esp`). Use `coc CrossroadsFoothold` in-game. A full Capital
+Wasteland cell import is still ahead.
 
 ## Bring your own games
 
@@ -44,28 +45,31 @@ Keep the DLL next to the EXE. Win32 (x86) matches the game executables.
 1. Start Steam if your New Vegas install is Steam-owned.
 2. Run `FalloutCrossroads.exe`.
 3. Point it at both install folders, **Save settings**.
-4. **Launch** — validates installs, probes `Fallout3.esm` worldspaces, starts
-   `FalloutNV.exe` suspended, injects `CrossroadsPlugin.dll`, then resumes.
+4. **Launch** — validates installs, probes `Fallout3.esm`, builds/deploy
+   `CrossroadsFoothold.esp` into FNV `Data\`, starts `FalloutNV.exe` suspended,
+   injects `CrossroadsPlugin.dll`, then resumes.
+5. In the FNV console: `coc CrossroadsFoothold`
 
 Plugin log: `%AppData%\FalloutCrossroads\crossroads.log`
 
 This does **not** bypass DRM or ship game files. If injection fails, check
-bitness (must be Win32) and antivirus rules.
+bitness (must be Win32) and antivirus rules. Mod managers may need the ESP
+enabled manually.
 
 ## Roadmap
 
 | Phase | Goal |
 |---|---|
 | 0 | Boot UI + BYO install gate |
-| 1 (now) | FNV host + plugin attach + F3 ESM probe |
-| 1b | One Capital foothold cell via content bridge |
+| 1 | FNV host + plugin attach + F3 ESM probe |
+| 1b (now) | Deploy foothold interior ESP + load wiring |
+| 1c | Import a real F3 Capital cell (refs/pathing/BSA) |
 | 2 | Plane/boat travel loop Capital ↔ Mojave |
 | 3+ | Expand toward full both-maps play |
 
 ## Reference decomps
 
-See [`reference/README.md`](reference/README.md) for optional read-only clones of
-public decompilation trees (reference only; not linked into these binaries).
+See [`reference/README.md`](reference/README.md) and [`docs/phase-1b-foothold.md`](docs/phase-1b-foothold.md).
 
 ## License
 

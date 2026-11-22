@@ -36,11 +36,13 @@ add_library(crossroads_core STATIC
   src/install_detect.cpp
   src/esm_probe.cpp
   src/host_launch.cpp
+  src/esp_writer.cpp
+  src/bridge_foothold.cpp
 )
 target_include_directories(crossroads_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_definitions(crossroads_core PUBLIC ${CROSSROADS_COMMON_DEFS})
 crossroads_msvc_options(crossroads_core)
-target_link_libraries(crossroads_core PUBLIC version shlwapi)
+target_link_libraries(crossroads_core PUBLIC version shlwapi shell32 ole32)
 
 # Boot launcher UI
 add_executable(crossroads_boot WIN32
