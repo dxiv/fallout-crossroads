@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 
+#include "coverage_policy.hpp"
 #include "log.hpp"
 #include "settings.hpp"
 #include "transit_journey.hpp"
@@ -19,7 +20,9 @@ void on_attach() {
     log::info(std::string("Console:\n") + book.console_hint);
   }
   log::info(book.next_action);
-  log::info("Plugins expected: CrossroadsFoothold.esp + CrossroadsTransit.esp");
+  log::info("Plugins expected: CrossroadsFoothold.esp + CrossroadsTransit.esp + CrossroadsSpine.esp");
+  const CoveragePolicy coverage = coverage_for_journey(journey);
+  log::info("Hot wasteland: " + hot_wasteland_name(coverage.hot) + " — " + coverage.note);
   const Settings s = load_settings();
   if (s.fallout3_install.empty()) {
     log::warn("No Fallout 3 path in settings; run FalloutCrossroads.exe first.");

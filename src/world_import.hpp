@@ -21,9 +21,18 @@ struct Phase1ImportResult {
   std::size_t bases = 0;
 };
 
-// Phase 1 complete content pack: Capital-flavored interior + WRLD exterior slice
-// from BYO Fallout3.esm into one remapped ESP.
+struct CapitalImportBudget {
+  std::size_t exterior_radius = 1;       // 1 → ~3×3, 2 → ~5×5
+  std::size_t max_exterior_cells = 9;
+  std::size_t max_refs = 800;
+};
+
+// Capital-flavored interior + WRLD exterior slice from BYO Fallout3.esm.
 Phase1ImportResult import_phase1_capital_pack(const std::filesystem::path& f3_install,
                                               const std::filesystem::path& out_esp);
+
+Phase1ImportResult import_phase1_capital_pack(const std::filesystem::path& f3_install,
+                                              const std::filesystem::path& out_esp,
+                                              const CapitalImportBudget& budget);
 
 }  // namespace crossroads

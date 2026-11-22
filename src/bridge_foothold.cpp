@@ -2,11 +2,14 @@
 
 #include "bsa_wire.hpp"
 #include "cell_import.hpp"
+#include "coverage_policy.hpp"
 #include "esp_writer.hpp"
 #include "log.hpp"
 #include "mojave_foothold.hpp"
 #include "settings.hpp"
+#include "spine_esp.hpp"
 #include "transit_esp.hpp"
+#include "transit_journey.hpp"
 #include "world_import.hpp"
 
 #include <fstream>
@@ -113,8 +116,18 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
   FootholdBridgeResult result;
   const auto staged = foothold_staging_dir() / L"CrossroadsFoothold.esp";
   const auto transit_staged = foothold_staging_dir() / L"CrossroadsTransit.esp";
+  const auto spine_staged = foothold_staging_dir() / L"CrossroadsSpine.esp";
 
-  const Phase1ImportResult pack = import_phase1_capital_pack(f3_install, staged);
+  const JourneyState journey = load_journey();
+  const CoveragePolicy coverage = coverage_for_journey(journey);
+  result.coverage_note = coverage.note;
+
+  CapitalImportBudget budget;
+  budget.exterior_radius = coverage.capital_exterior_radius;
+  budget.max_exterior_cells = coverage.capital_max_exterior_cells;
+  budget.max_refs = coverage.capital_max_refs;
+
+  const Phase1ImportResult pack = import_phase1_capital_pack(f3_install, staged, budget);
   bool wrote_esp = pack.ok;
   if (pack.ok) {
     result.cell_editor_id = pack.interior_edid.empty() ? "CrossroadsFoothold" : pack.interior_edid;
@@ -124,7 +137,7 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
     result.cow_hint = pack.cow_hint;
     result.exterior_cells = pack.exterior_cells;
   } else {
-    log::warn("Phase 1 Capital pack failed (" + pack.summary + "); trying interior-only import");
+    log::warn("Capital pack failed (" + pack.summary + "); trying interior-only import");
     const CellImportResult imported = import_capital_foothold_cell(f3_install, staged);
     if (imported.ok) {
       wrote_esp = true;
@@ -159,10 +172,18 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
   result.plane_cell = transit.plane_cell;
   result.boat_cell = transit.boat_cell;
 
+  const SpineEspResult spine = write_spine_esp(spine_staged);
+  if (!spine.ok) {
+    result.summary = spine.summary;
+    result.detail = spine.detail;
+    return result;
+  }
+
   const MojaveFootholdResult mojave = resolve_mojave_foothold(fnv_install);
   if (mojave.ok) {
     result.mojave_cell_edid = mojave.cell_editor_id;
     result.mojave_world_edid = mojave.world_editor_id;
+    result.mojave_cow_hint = mojave.cow_hint;
   }
 
   const BsaWireResult bsa = wire_fallout3_bsas_into_fnv(f3_install, fnv_install);
@@ -180,6 +201,12 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
     result.detail = transit_note;
     return result;
   }
+  std::string spine_note;
+  if (!deploy_named_esp(spine_staged, fnv_install, L"CrossroadsSpine.esp", result.spine_esp_in_data, spine_note)) {
+    result.summary = "Failed to deploy CrossroadsSpine.esp";
+    result.detail = spine_note;
+    return result;
+  }
 
   std::ostringstream detail;
   if (pack.ok) {
@@ -187,23 +214,15 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
   } else {
     detail << "fallback capital path";
   }
+  detail << " | coverage hot=" << hot_wasteland_name(coverage.hot) << " (" << coverage.note << ")";
   detail << " | transit: " << transit.detail;
+  detail << " | spine: " << spine.detail;
   detail << " | mojave: " << (mojave.ok ? mojave.detail : mojave.summary);
   detail << " | " << bsa.summary << " — " << bsa.detail;
-  detail << " | " << plugins_note << " | " << transit_note;
-  if (!result.coc_hint.empty()) {
-    detail << " | " << result.coc_hint;
-  }
-  if (!result.cow_hint.empty()) {
-    detail << " | " << result.cow_hint;
-  }
-  detail << " | coc " << result.plane_cell << " | coc " << result.boat_cell;
-  if (!result.mojave_cell_edid.empty()) {
-    detail << " | coc " << result.mojave_cell_edid;
-  }
+  detail << " | " << plugins_note << " | " << transit_note << " | " << spine_note;
 
   result.ok = true;
-  result.summary = "Phase 2 Capital + Transit + Mojave foothold deployed";
+  result.summary = "Phase 3 coverage + spine deployed";
   result.detail = detail.str();
   log::info(result.summary + " — " + result.detail);
   return result;

@@ -284,7 +284,7 @@ LegPlaybook playbook_for(const JourneyState& state) {
       p.console_hint = state.mojave_cell_edid.empty() ? "coc Goodsprings"
                                                       : ("coc " + state.mojave_cell_edid);
       if (!state.mojave_world_edid.empty()) {
-        p.console_hint += "\n(world " + state.mojave_world_edid + " already on host)";
+        p.console_hint += "\ncow " + state.mojave_world_edid + " -18 16";
       }
       p.next_action = "Roam the foothold, then Advance journey → Boat east";
       break;

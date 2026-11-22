@@ -133,6 +133,9 @@ MojaveFootholdResult resolve_mojave_foothold(const std::filesystem::path& fnv_in
     result.summary = "Mojave foothold resolved";
     result.detail = "cell=" + result.cell_editor_id + " world=" + result.world_editor_id;
   }
+  // Goodsprings-adjacent exterior pocket (host-native land; Phase 3 coverage).
+  result.cow_hint = "cow " + result.world_editor_id + " -18 16";
+  result.detail += " | " + result.cow_hint;
   result.ok = true;
   log::info(result.summary + " — " + result.detail);
   return result;
