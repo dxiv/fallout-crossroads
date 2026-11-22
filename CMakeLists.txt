@@ -39,6 +39,7 @@ add_library(crossroads_core STATIC
   src/host_launch.cpp
   src/esp_writer.cpp
   src/cell_import.cpp
+  src/world_import.cpp
   src/bsa_wire.cpp
   src/bridge_foothold.cpp
 )
