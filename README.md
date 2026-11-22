@@ -3,9 +3,9 @@
 Unofficial Windows fan project: one continuous Fallout journey from the
 **Capital Wasteland** to the **Mojave** and back (plane west, boat east).
 
-**Phase 2 (current):** Capital pack + **Crossroads Transit** (plane/boat cabins)
-+ Mojave foothold resolve + `journey.json` travel loop. Launch deploys plugins;
-**Advance** steps Capital → Plane → Mojave → Boat → Capital return.
+**Phase 3 (current):** expanded Capital exterior coverage, hot-wasteland
+streaming policy, Mojave exterior `cow` hints, and `CrossroadsSpine.esp`
+quest stubs — on top of the Phase 2 travel loop.
 
 ## Bring your own games
 
@@ -17,8 +17,7 @@ You must own legal PC copies of:
 | Fallout: New Vegas | Steam **1.4.0.525** |
 
 The launcher only stores paths under `%AppData%\FalloutCrossroads\`. It
-**never** copies Bethesda game assets into git. Runtime may junction/hardlink
-your own F3 BSAs into FNV `Data\` as `CR_FO3_*` so meshes can resolve.
+**never** copies Bethesda game assets into git.
 
 ## Build (Windows 10/11 + MSVC)
 
@@ -27,25 +26,23 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A Win32
 cmake --build build --config Release
 ```
 
-Outputs (same folder): `FalloutCrossroads.exe` and `CrossroadsPlugin.dll` (Win32).
+Outputs: `FalloutCrossroads.exe` and `CrossroadsPlugin.dll` (Win32).
 
 ## Run
 
-1. Start Steam if needed for New Vegas.
-2. Run `FalloutCrossroads.exe`, set both install paths, **Save settings**.
-3. **Launch** — deploys `CrossroadsFoothold.esp` + `CrossroadsTransit.esp`, wires BSAs, starts host.
-4. Follow console hints; use **Advance** to step the travel loop.
+1. Set both install paths → **Launch** (deploys Foothold + Transit + Spine ESPs).
+2. **Advance** through Capital → Plane → Mojave → Boat → Capital.
+3. Use Capital / Mojave `coc`/`cow` hints from the dialog and log.
 
-Details: [`docs/phase-2-travel.md`](docs/phase-2-travel.md).
+Details: [`docs/phase-3-coverage.md`](docs/phase-3-coverage.md).
 
 ## Roadmap
 
 | Phase | Goal |
 |---|---|
-| 0 | Boot UI + BYO install gate |
-| 1 | Capital foothold (interior + exterior slice) |
-| 2 (now) | Plane/boat travel loop Capital ↔ Mojave |
-| 3 | Expand both-maps coverage + spine stubs |
+| 0–1 | Boot + Capital foothold |
+| 2 | Travel loop |
+| 3 (now) | Coverage + spine stubs |
 | 4 | Polish, crash hygiene, ownership docs |
 
 ## License

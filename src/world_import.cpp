@@ -16,8 +16,6 @@ namespace crossroads {
 namespace {
 
 constexpr std::uint32_t kNewIdBase = 0x01004000;
-constexpr std::size_t kMaxExteriorCells = 9;
-constexpr std::size_t kMaxRefsTotal = 800;
 
 const char* kPreferredWorlds[] = {"Wasteland", "WastelandMaster", "CapitalWasteland", "Worldspace"};
 const char* kPreferredInteriors[] = {"Vault101a", "Vault101b", "MegatonPlayerHouse", "TenpennySuitePlayer",
@@ -333,6 +331,12 @@ std::uint32_t find_interior(const EsmIndex& index, std::string& edid_out) {
 
 Phase1ImportResult import_phase1_capital_pack(const std::filesystem::path& f3_install,
                                               const std::filesystem::path& out_esp) {
+  return import_phase1_capital_pack(f3_install, out_esp, CapitalImportBudget{});
+}
+
+Phase1ImportResult import_phase1_capital_pack(const std::filesystem::path& f3_install,
+                                              const std::filesystem::path& out_esp,
+                                              const CapitalImportBudget& budget) {
   Phase1ImportResult result;
   const EsmIndex index = build_fallout3_index(f3_install);
   if (!index.ok) {
@@ -373,17 +377,18 @@ Phase1ImportResult import_phase1_capital_pack(const std::filesystem::path& f3_in
       }
       const int cx = best->gx;
       const int cy = best->gy;
+      const int radius = static_cast<int>(budget.exterior_radius == 0 ? 1 : budget.exterior_radius);
       std::vector<ExtCellInfo> near;
       for (const auto& e : exterior_pick) {
-        if (std::abs(e.gx - cx) <= 1 && std::abs(e.gy - cy) <= 1) {
+        if (std::abs(e.gx - cx) <= radius && std::abs(e.gy - cy) <= radius) {
           near.push_back(e);
         }
       }
       if (near.empty()) {
         near.push_back(*best);
       }
-      if (near.size() > kMaxExteriorCells) {
-        near.resize(kMaxExteriorCells);
+      if (near.size() > budget.max_exterior_cells) {
+        near.resize(budget.max_exterior_cells);
       }
       exterior_pick.swap(near);
       result.cow_hint = "cow " + world_edid + " " + std::to_string(cx) + " " + std::to_string(cy);
@@ -406,7 +411,7 @@ Phase1ImportResult import_phase1_capital_pack(const std::filesystem::path& f3_in
       return;
     }
     for (std::uint32_t rid : it->second.refs) {
-      if (all_refs.size() >= kMaxRefsTotal) {
+      if (all_refs.size() >= budget.max_refs) {
         break;
       }
       EsmRecord r;

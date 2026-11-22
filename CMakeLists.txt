@@ -44,6 +44,8 @@ add_library(crossroads_core STATIC
   src/transit_esp.cpp
   src/transit_journey.cpp
   src/mojave_foothold.cpp
+  src/coverage_policy.cpp
+  src/spine_esp.cpp
   src/bridge_foothold.cpp
 )
 target_include_directories(crossroads_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")

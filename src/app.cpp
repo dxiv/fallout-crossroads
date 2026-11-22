@@ -150,8 +150,8 @@ void refresh_status(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_ADVANCE), ready ? TRUE : FALSE);
   if (ready) {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Launch deploys Capital pack + Transit ESP + Mojave foothold hints, then starts the host. "
-                    L"Use Advance to step Capital → Plane → Mojave → Boat → Capital.");
+                    L"Launch deploys expanded Capital coverage + Transit + Spine ESPs, then starts the host. "
+                    L"Use Advance for the travel loop; only one wasteland is treated as hot per leg.");
   } else {
     set_window_text(dlg, IDC_GATE_NOTE,
                     L"Crossroads refuses to launch until BOTH legal installs validate. "
@@ -203,7 +203,7 @@ void launch_phase2_host(HWND owner) {
   JourneyState journey = load_journey();
   const LegPlaybook book = playbook_for(journey);
 
-  std::wstring msg = L"Phase 2 travel loop + host\r\n\r\n";
+  std::wstring msg = L"Phase 3 coverage + travel loop + host\r\n\r\n";
   msg += utf8_to_wide(probe.summary) + L"\r\n";
   if (!probe.detail.empty()) {
     msg += utf8_to_wide(probe.detail) + L"\r\n\r\n";
@@ -250,7 +250,7 @@ INT_PTR CALLBACK MainProc(HWND dlg, UINT msg, WPARAM wparam, LPARAM lparam) {
       g_log_box = GetDlgItem(dlg, IDC_LOG);
       log::set_sink(ui_log_sink);
       InitCommonControls();
-      set_window_text(dlg, IDC_TITLE, L"Fallout: Crossroads  —  Phase 2 travel");
+      set_window_text(dlg, IDC_TITLE, L"Fallout: Crossroads  —  Phase 3 coverage");
       g_settings = load_settings();
       load_paths_into_ui(dlg);
       log::info("Boot UI ready.");

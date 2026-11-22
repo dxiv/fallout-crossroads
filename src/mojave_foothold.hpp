@@ -11,6 +11,7 @@ struct MojaveFootholdResult {
   std::string detail;
   std::string cell_editor_id;   // preferred coc target in vanilla FNV
   std::string world_editor_id;  // e.g. WastelandNV
+  std::string cow_hint;         // exterior grid for Mojave walks
 };
 
 // Probes BYO FalloutNV.esm for a Mojave arrival foothold (interior or known EDID).
