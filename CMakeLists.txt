@@ -41,6 +41,9 @@ add_library(crossroads_core STATIC
   src/cell_import.cpp
   src/world_import.cpp
   src/bsa_wire.cpp
+  src/transit_esp.cpp
+  src/transit_journey.cpp
+  src/mojave_foothold.cpp
   src/bridge_foothold.cpp
 )
 target_include_directories(crossroads_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")

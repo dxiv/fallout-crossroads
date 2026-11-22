@@ -16,5 +16,7 @@
 #define IDC_CONTINUE            1013
 #define IDC_QUIT                1014
 #define IDC_GATE_NOTE           1015
+#define IDC_JOURNEY_STATUS      1016
+#define IDC_ADVANCE             1017
 
 #define IDI_APP                 1
