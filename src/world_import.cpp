@@ -63,14 +63,17 @@ void append_record(std::vector<char>& out, const EsmRecord& rec, std::uint32_t n
 }
 
 std::vector<char> wrap_grup(std::uint32_t label, std::int32_t group_type, const std::vector<char>& body) {
+  // FO3/FNV GRUP header is 24 bytes (includes version fields). Size includes this header.
   std::vector<char> out;
   const std::uint32_t size = static_cast<std::uint32_t>(24 + body.size());
   append_bytes(out, "GRUP", 4);
   append_u32(out, size);
   append_u32(out, label);
   append_u32(out, static_cast<std::uint32_t>(group_type));
-  append_u16(out, 0);
-  append_u16(out, 0);
+  append_u16(out, 0);  // stamp
+  append_u16(out, 0);  // unknown
+  append_u16(out, 0);  // version
+  append_u16(out, 0);  // unknown2
   out.insert(out.end(), body.begin(), body.end());
   return out;
 }

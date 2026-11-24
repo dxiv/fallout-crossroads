@@ -157,8 +157,9 @@ void refresh_status(HWND dlg) {
   EnableWindow(GetDlgItem(dlg, IDC_ADVANCE), ready ? TRUE : FALSE);
   if (ready) {
     set_window_text(dlg, IDC_GATE_NOTE,
-                    L"Launch deploys expanded Capital coverage + Transit + Spine ESPs, then starts the host. "
-                    L"Use Advance for the travel loop; only one wasteland is treated as hot per leg.");
+                    L"Launch deploys Capital + Transit + Spine ESPs and a Pip-Boy quest "
+                    L"(Crossroads: Capital Foothold) with a Doc Mitchell gate + map marker. "
+                    L"No console required. Advance still steps the journey journal.");
   } else {
     set_window_text(dlg, IDC_GATE_NOTE,
                     L"Crossroads refuses to launch until BOTH legal installs validate. "

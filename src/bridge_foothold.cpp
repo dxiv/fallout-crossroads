@@ -1,6 +1,7 @@
 #include "bridge_foothold.hpp"
 
 #include "bsa_wire.hpp"
+#include "capital_travel.hpp"
 #include "cell_import.hpp"
 #include "coverage_policy.hpp"
 #include "esp_writer.hpp"
@@ -79,6 +80,27 @@ bool ensure_plugin_enabled(const std::filesystem::path& plugins_txt, const std::
   return static_cast<bool>(out);
 }
 
+bool ensure_loadorder_line(const std::filesystem::path& loadorder_txt, const std::string& esp_name) {
+  std::error_code ec;
+  if (loadorder_txt.empty()) {
+    return false;
+  }
+  std::filesystem::create_directories(loadorder_txt.parent_path(), ec);
+  if (file_contains_line(loadorder_txt, esp_name)) {
+    return true;
+  }
+  const bool exists = std::filesystem::is_regular_file(loadorder_txt, ec);
+  std::ofstream out(loadorder_txt, exists ? std::ios::app : std::ios::trunc);
+  if (!out) {
+    return false;
+  }
+  if (exists) {
+    out << "\n";
+  }
+  out << esp_name << "\n";
+  return static_cast<bool>(out);
+}
+
 bool deploy_named_esp(const std::filesystem::path& staged,
                       const std::filesystem::path& fnv_install,
                       const std::wstring& esp_name,
@@ -98,9 +120,10 @@ bool deploy_named_esp(const std::filesystem::path& staged,
   }
   const std::string name_utf8 = wide_to_utf8(esp_name);
   bool enabled = false;
-  const auto local = local_appdata() / L"FalloutNV" / L"plugins.txt";
-  if (!local.empty()) {
-    enabled = ensure_plugin_enabled(local, name_utf8) || enabled;
+  const auto local_dir = local_appdata() / L"FalloutNV";
+  if (!local_dir.empty()) {
+    enabled = ensure_plugin_enabled(local_dir / L"plugins.txt", name_utf8) || enabled;
+    ensure_loadorder_line(local_dir / L"loadorder.txt", name_utf8);
   }
   enabled = ensure_plugin_enabled(data_dir / L"plugins.txt", name_utf8) || enabled;
   plugins_note = enabled ? (name_utf8 + " enabled") : ("enable " + name_utf8 + " manually");
@@ -129,6 +152,7 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
 
   const Phase1ImportResult pack = import_phase1_capital_pack(f3_install, staged, budget);
   bool wrote_esp = pack.ok;
+  bool imported_capital_assets = pack.ok;
   if (pack.ok) {
     result.cell_editor_id = pack.interior_edid.empty() ? "CrossroadsFoothold" : pack.interior_edid;
     result.world_editor_id = pack.world_edid;
@@ -141,6 +165,7 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
     const CellImportResult imported = import_capital_foothold_cell(f3_install, staged);
     if (imported.ok) {
       wrote_esp = true;
+      imported_capital_assets = true;
       result.cell_editor_id = imported.cell_editor_id;
       result.f3_worldspace_hint = imported.cell_editor_id;
       result.coc_hint = "coc " + imported.cell_editor_id;
@@ -155,11 +180,19 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
         return result;
       }
       wrote_esp = true;
+      imported_capital_assets = false;
     }
   }
 
   if (!wrote_esp) {
     result.summary = "No foothold ESP produced";
+    return result;
+  }
+
+  const CapitalTravelResult travel = append_capital_pipboy_travel(staged);
+  if (!travel.ok) {
+    result.summary = travel.summary;
+    result.detail = travel.detail;
     return result;
   }
 
@@ -186,7 +219,16 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
     result.mojave_cow_hint = mojave.cow_hint;
   }
 
-  const BsaWireResult bsa = wire_fallout3_bsas_into_fnv(f3_install, fnv_install);
+  // FO3 BSA overlays shadow FNV mesh/texture paths and can AV on save load.
+  // Only wire when Capital content was actually imported from Fallout3.esm.
+  BsaWireResult bsa;
+  if (imported_capital_assets) {
+    bsa = wire_fallout3_bsas_into_fnv(f3_install, fnv_install);
+  } else {
+    log::warn("Skipping FO3 BSA wire (no imported Capital content); clearing any prior CR_FO3_* overlays");
+    bsa = unwire_fallout3_bsas_from_fnv(fnv_install);
+    bsa.summary = "BSA wire skipped — " + bsa.summary;
+  }
 
   std::string plugins_note;
   if (!deploy_named_esp(staged, fnv_install, L"CrossroadsFoothold.esp", result.esp_in_data, plugins_note)) {
@@ -215,6 +257,7 @@ FootholdBridgeResult build_and_deploy_foothold(const std::filesystem::path& f3_i
     detail << "fallback capital path";
   }
   detail << " | coverage hot=" << hot_wasteland_name(coverage.hot) << " (" << coverage.note << ")";
+  detail << " | pipboy: " << travel.detail;
   detail << " | transit: " << transit.detail;
   detail << " | spine: " << spine.detail;
   detail << " | mojave: " << (mojave.ok ? mojave.detail : mojave.summary);

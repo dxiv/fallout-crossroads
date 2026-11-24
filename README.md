@@ -3,8 +3,9 @@
 Unofficial Windows fan project: one continuous Fallout journey from the
 **Capital Wasteland** to the **Mojave** and back (plane west, boat east).
 
-**Current build (v0.4):** Phase 0–4 complete — boot gate, Capital pack, travel
-loop, coverage/spine stubs, crash guard + doctor checklist.
+**Current build (v0.5):** Phase 0–4 plus Pip-Boy Capital travel — boot gate,
+Capital pack, travel loop, coverage/spine stubs, crash guard + doctor checklist,
+and a start-game quest with Doc Mitchell gate + world-map fast-travel marker.
 
 ## Bring your own games
 
@@ -29,8 +30,11 @@ Outputs: `FalloutCrossroads.exe` and `CrossroadsPlugin.dll` (Win32).
 ## Run
 
 1. Set both install paths → **Launch** (deploys Foothold + Transit + Spine ESPs).
-2. **Advance** through Capital → Plane → Mojave → Boat → Capital.
-3. Check `%AppData%\FalloutCrossroads\` for `journey.json`, `doctor.txt`, logs.
+2. In New Vegas: Pip-Boy → **Quests → Crossroads: Capital Foothold**.
+3. Use the **door in Doc Mitchell's house**, or world-map fast-travel to
+   **Crossroads Capital** (no console key needed).
+4. Optional: **Advance** still steps the journey journal (Capital → Plane → Mojave → Boat → Capital).
+5. Check `%AppData%\FalloutCrossroads\` for `journey.json`, `doctor.txt`, logs.
 
 ## Docs
 
