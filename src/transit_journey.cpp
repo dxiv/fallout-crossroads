@@ -264,12 +264,11 @@ LegPlaybook playbook_for(const JourneyState& state) {
   switch (state.leg) {
     case TransitLeg::CapitalStart:
       p.title = "Leg 1 — Capital foothold";
-      p.summary = "Load into the imported Capital cell / exterior slice.";
-      p.console_hint = state.capital_cell_edid.empty() ? "coc CrossroadsFoothold"
-                                                       : ("coc " + state.capital_cell_edid);
-      if (!state.capital_cow_hint.empty()) {
-        p.console_hint += "\n" + state.capital_cow_hint;
-      }
+      p.summary =
+          "Use Pip-Boy quest Crossroads: Capital Foothold — Doc Mitchell gate or map "
+          "fast-travel to Crossroads Capital (lands CR_CapitalArrive).";
+      p.console_hint = "Pip-Boy → Quests → Crossroads: Capital Foothold\n"
+                       "(optional) coc CR_CapitalArrive";
       p.next_action = "Explore, then Advance journey → Plane west";
       break;
     case TransitLeg::PlaneWest:
@@ -296,9 +295,12 @@ LegPlaybook playbook_for(const JourneyState& state) {
       break;
     case TransitLeg::CapitalReturn:
       p.title = "Leg 5 — Capital return";
-      p.summary = "Disembark back into the Capital pack cell.";
-      p.console_hint = state.capital_cell_edid.empty() ? "coc CrossroadsFoothold"
-                                                       : ("coc " + state.capital_cell_edid);
+      p.summary =
+          "Return via the Goodsprings Crossroads Capital map marker / exterior gate, or the "
+          "Doc Mitchell house gate.";
+      p.console_hint = "World map → Crossroads Capital\n"
+                       "or Doc Mitchell door → CR_CapitalArrive\n"
+                       "(optional) coc CR_CapitalArrive";
       p.next_action = "Confirm return, then Advance journey → mark loop complete";
       break;
     case TransitLeg::LoopComplete:

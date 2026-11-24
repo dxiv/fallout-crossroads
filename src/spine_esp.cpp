@@ -73,7 +73,9 @@ std::vector<char> build_note(const std::string& editor_id, const std::string& ti
   std::vector<char> data;
   append_sub_str(data, "EDID", editor_id);
   append_sub_str(data, "FULL", title);
-  // TNAM note type 0 = note text; DATA/TNAM layout varies — keep minimal FULL + EDID for stub identity.
+  // DATA: note type (0 = text). Missing type makes TNAM ambiguous and can fault the host.
+  const std::uint8_t note_type = 0;
+  append_sub(data, "DATA", &note_type, 1);
   append_sub_str(data, "TNAM", body);
   return data;
 }

@@ -20,19 +20,19 @@ Capital foothold → plane west → Mojave foothold → boat east → Capital ag
 ## Reviewer loop
 
 1. Set both install paths → **Launch**
-2. Console: follow the dialog / log (`coc` Capital, then Advance)
-3. **Advance** → `coc CR_PlaneCabin`
-4. **Advance** → `coc` Mojave foothold EDID
-5. **Advance** → `coc CR_BoatCabin`
-6. **Advance** → Capital return `coc`
-7. **Advance** → Loop complete (journey header persisted)
+2. Pip-Boy → Quests → **Crossroads: Capital Foothold** (start-game enabled)
+3. Enter the **Doc Mitchell house gate**, or world-map fast-travel to **Crossroads Capital**
+   (marker near Goodsprings; exterior gate beside it). Lands in `CR_CapitalArrive`.
+4. Optional journal: **Advance** → plane / Mojave / boat legs (cabins still console-optional)
+5. **Advance** → Loop complete (journey header persisted)
 
 ## Limits (honest)
 
 - Transit cabins are Crossroads-authored empty interiors (placeholders until meshes kitbash from BYO)
-- Worldspace “hot swap” is console/`coc`-driven in this phase, not a seamless engine teleport yet
+- Capital Pip-Boy path is door + map marker (no console). Other legs may still use `coc` if desired.
 - Inventory/level in `journey.json` is the Crossroads seam stub — not a full FNV save rewrite
 - Mod managers may need manual plugin enable for both ESPs
+- UK keyboards: Capital travel does not need the console key
 
 ## Verify
 

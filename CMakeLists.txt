@@ -7,7 +7,7 @@ if(NOT WIN32)
 endif()
 
 project(fallout-crossroads
-  VERSION 0.4.0
+  VERSION 0.5.0
   DESCRIPTION "Fallout: Crossroads"
   LANGUAGES CXX)
 
@@ -40,6 +40,7 @@ add_library(crossroads_core STATIC
   src/cell_import.cpp
   src/world_import.cpp
   src/bsa_wire.cpp
+  src/capital_travel.cpp
   src/transit_esp.cpp
   src/transit_journey.cpp
   src/mojave_foothold.cpp
